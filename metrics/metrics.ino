@@ -72,9 +72,17 @@ void setup()
 
 void loop()
 { 
+    pixels.setBrightness(30);
     HTTPClient http;
+
+    String urls[4] = { 
+      "https://api.myjson.com/bins/12iv9r", 
+      "https://api.myjson.com/bins/1f0yz3", 
+      "https://api.myjson.com/bins//sehzj", 
+      "https://api.myjson.com/bins/g56n3" 
+    };
     
-    http.begin("https://www.example.com/status");
+    http.begin(urls[random(4)]);
     int httpCode = http.GET(); 
 
     if (httpCode > 0) {
@@ -98,28 +106,44 @@ void loop()
           String four_xx = json["metrics"]["statuses"]["grouped"]["4xx"];
           String five_xx = json["metrics"]["statuses"]["grouped"]["5xx"];
 
+          tft.setTextFont(6); tft.setCursor(50, 50);   tft.fillRect(44, 44, 150, 50, 0xffff);   tft.println(avg_db.toInt());
+          tft.setTextFont(6); tft.setCursor(290, 50);  tft.fillRect(284, 44, 150, 50, 0xffff);  tft.println(avg_du.toInt());
+          tft.setTextFont(6); tft.setCursor(50, 160);  tft.fillRect(44, 154, 150, 50, 0xffff);  tft.println(max_db.toInt());
+          tft.setTextFont(6); tft.setCursor(290, 160); tft.fillRect(284, 154, 150, 50, 0xffff); tft.println(max_du.toInt());
+          
+          tft.setTextFont(6); tft.setCursor(10, 260);  tft.fillRect(4, 254, 152, 50, 0xffff);   tft.println(two_xx.toInt());
+          tft.setTextFont(6); tft.setCursor(170, 260); tft.fillRect(165, 254, 151, 50, 0xffff); tft.println(four_xx.toInt());
+          tft.setTextFont(6); tft.setCursor(330, 260); tft.fillRect(325, 254, 151, 50, 0xffff); tft.println(five_xx.toInt());    
+
           pixels.clear();
 
-          if (two_xx.toInt() > 1000 ) { addNextPixel(0, 0, 150, 0); } // 1
-          if (two_xx.toInt() > 2000 ) { addNextPixel(1, 0, 150, 0); } // 2
-          if (two_xx.toInt() > 3000 ) { addNextPixel(2, 0, 150, 0); } // 3
-          if (two_xx.toInt() > 4000 ) { addNextPixel(3, 0, 150, 0); } // 4
-          if (two_xx.toInt() > 5000 ) { addNextPixel(4, 0, 150, 0); } // 5
-          if (two_xx.toInt() > 6000 ) { addNextPixel(5, 0, 150, 0); } // 6
+          if (two_xx.toInt() >= 1000 ) { addNextPixel(0, 0, 150, 0); } // 1
+          if (two_xx.toInt() >= 2000 ) { addNextPixel(1, 0, 150, 0); } // 2
+          if (two_xx.toInt() >= 3000 ) { addNextPixel(2, 0, 150, 0); } // 3
+          if (two_xx.toInt() >= 4000 ) { addNextPixel(3, 0, 150, 0); } // 4
+          if (two_xx.toInt() >= 5000 ) { addNextPixel(4, 0, 150, 0); } // 5
+          if (two_xx.toInt() >= 6000 ) { addNextPixel(5, 0, 150, 0); } // 6
 
-          if (max_db.toInt() > 500) { pixels.setPixelColor(6, pixels.Color(250, 0, 255)); }  // 7 - MAX DB warning
-          if (five_xx.toInt() > 0)  { pixels.setPixelColor(7, pixels.Color(150, 0, 0));   }  // 8 - 5xx warning
+          if (five_xx.toInt() > 0 || max_db.toInt() >= 500)  {
+            pixels.setBrightness(100); 
+            for(int i=0; i<10; i++) {
+              if ((i % 2) == 0) { 
+                if (five_xx.toInt() > 0)   { pixels.setPixelColor(7, pixels.Color(150, 0, 0)); }
+                if (max_db.toInt() >= 500) { pixels.setPixelColor(6, pixels.Color(0, 0, 0));   }
+              } else {
+                if (five_xx.toInt() > 0)   { pixels.setPixelColor(7, pixels.Color(0, 0, 0)); }
+                if (max_db.toInt() >= 500) { pixels.setPixelColor(6, pixels.Color(250, 0, 255)); }
+              }
+              pixels.show();
+              delay(300);
+            }
 
-          pixels.show();
-
-          tft.setTextFont(6); tft.setCursor(50, 50);   tft.fillRect(44, 44, 150, 50, 0xffff);   tft.println(avg_db);
-          tft.setTextFont(6); tft.setCursor(290, 50);  tft.fillRect(284, 44, 150, 50, 0xffff);  tft.println(avg_du);
-          tft.setTextFont(6); tft.setCursor(50, 160);  tft.fillRect(44, 154, 150, 50, 0xffff);  tft.println(max_db);
-          tft.setTextFont(6); tft.setCursor(290, 160); tft.fillRect(284, 154, 150, 50, 0xffff); tft.println(max_du);
-          
-          tft.setTextFont(6); tft.setCursor(10, 260);  tft.fillRect(4, 254, 152, 50, 0xffff);   tft.println(two_xx);
-          tft.setTextFont(6); tft.setCursor(170, 260); tft.fillRect(165, 254, 151, 50, 0xffff); tft.println(four_xx);
-          tft.setTextFont(6); tft.setCursor(330, 260); tft.fillRect(325, 254, 151, 50, 0xffff); tft.println(five_xx);    
+            if (five_xx.toInt() > 0)   { pixels.setPixelColor(7, pixels.Color(150, 0, 0)); }
+            if (max_db.toInt() >= 500) { pixels.setPixelColor(6, pixels.Color(250, 0, 255)); }
+            
+            pixels.setBrightness(30);
+            pixels.show();
+          }
         }  
     } 
 
