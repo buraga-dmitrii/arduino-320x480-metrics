@@ -38,7 +38,7 @@ const char* password = "pass";
 void setup()
 {
   pixels.begin();
-  pixels.setBrightness(30);
+  pixels.setBrightness(100);
   pixels.clear();
   
   tft.init();
@@ -71,8 +71,7 @@ void setup()
 }
 
 void loop()
-{ 
-    pixels.setBrightness(30);
+{  
     HTTPClient http;
 
     String urls[4] = { 
@@ -82,11 +81,10 @@ void loop()
       "https://api.myjson.com/bins/g56n3" 
     };
     
-    http.begin(urls[random(4)]);
+    http.begin(urls[random(0, 3)]);
     int httpCode = http.GET(); 
 
-    if (httpCode > 0) {
-      
+    if (httpCode > 0) {  
         String response = http.getString();
         Serial.println(httpCode);
         Serial.println(response);
@@ -114,45 +112,37 @@ void loop()
           tft.setTextFont(6); tft.setCursor(10, 260);  tft.fillRect(4, 254, 152, 50, 0xffff);   tft.println(two_xx.toInt());
           tft.setTextFont(6); tft.setCursor(170, 260); tft.fillRect(165, 254, 151, 50, 0xffff); tft.println(four_xx.toInt());
           tft.setTextFont(6); tft.setCursor(330, 260); tft.fillRect(325, 254, 151, 50, 0xffff); tft.println(five_xx.toInt());    
-
-          pixels.clear();
-
-          if (two_xx.toInt() >= 1000 ) { addNextPixel(0, 0, 150, 0); } // 1
-          if (two_xx.toInt() >= 2000 ) { addNextPixel(1, 0, 150, 0); } // 2
-          if (two_xx.toInt() >= 3000 ) { addNextPixel(2, 0, 150, 0); } // 3
-          if (two_xx.toInt() >= 4000 ) { addNextPixel(3, 0, 150, 0); } // 4
-          if (two_xx.toInt() >= 5000 ) { addNextPixel(4, 0, 150, 0); } // 5
-          if (two_xx.toInt() >= 6000 ) { addNextPixel(5, 0, 150, 0); } // 6
-
-          if (five_xx.toInt() > 0 || max_db.toInt() >= 500)  {
-            pixels.setBrightness(100); 
+          
+          if (five_xx.toInt() > 0 || max_db.toInt() >= 500)  {    
             for(int i=0; i<10; i++) {
+              pixels.clear();
+              
               if ((i % 2) == 0) { 
-                if (five_xx.toInt() > 0)   { pixels.setPixelColor(7, pixels.Color(150, 0, 0)); }
-                if (max_db.toInt() >= 500) { pixels.setPixelColor(6, pixels.Color(0, 0, 0));   }
+                if (five_xx.toInt() > 0)   { FIVE_XX_LEDS(150, 0, 0); }
+                if (max_db.toInt() >= 500) { DB_LEDS(0, 0, 0);   }
               } else {
-                if (five_xx.toInt() > 0)   { pixels.setPixelColor(7, pixels.Color(0, 0, 0)); }
-                if (max_db.toInt() >= 500) { pixels.setPixelColor(6, pixels.Color(250, 0, 255)); }
+                if (five_xx.toInt() > 0)   { FIVE_XX_LEDS(0, 0, 0); }
+                if (max_db.toInt() >= 500) { DB_LEDS(0, 130, 255); }
               }
+              
               pixels.show();
-              delay(300);
+              delay(200);
             }
 
-            if (five_xx.toInt() > 0)   { pixels.setPixelColor(7, pixels.Color(150, 0, 0)); }
-            if (max_db.toInt() >= 500) { pixels.setPixelColor(6, pixels.Color(250, 0, 255)); }
-            
-            pixels.setBrightness(30);
-            pixels.show();
+            pixels.clear();
+            pixels.show(); 
           }
         }  
     } 
 
    http.end();
-   
-   delay(1000);
+   delay(500);
 }
 
-void addNextPixel(int pos, int r, int g, int b){
-  for(int i=0; i<=pos; i++)  { pixels.setPixelColor(i, pixels.Color(r, g, b)); pixels.show(); }           
-  for(int i=pos+1; i<8; i++) { pixels.setPixelColor(i, pixels.Color(0,0,0)); pixels.show();   }            
+void DB_LEDS(int r, int g, int b) {
+  for(int i=0; i<4; i++) { pixels.setPixelColor(i, pixels.Color(r ,g, b)); }
+}
+
+void FIVE_XX_LEDS(int r, int g, int b) {
+  for(int i=4; i<8; i++) { pixels.setPixelColor(i, pixels.Color(r ,g, b)); }
 }
