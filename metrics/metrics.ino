@@ -28,22 +28,41 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <Adafruit_NeoPixel.h>
+#include <EEPROM.h>
+
+void writeString(char add,String data);
+String read_String(char add);
 
 Adafruit_NeoPixel pixels(8, 23, NEO_GRB + NEO_KHZ800);
 TFT_eSPI tft = TFT_eSPI();
 
-const char* ssid     = "usr";
-const char* password = "pass";
 
 void setup()
 {
+  Serial.begin(115200);
+  delay(10);
+
+  //  Read from EEPROM ----------------------------------------------------------------
+  EEPROM.begin(512);
+  // writeString(10, "ssid");       //Write ssid to address 10
+  // writeString(100, "password");  //Write password to address 100
+
+  String ssid_str  = read_String(10); // read ssid from EEPROM from address 10
+  char ssid[50];
+  ssid_str.toCharArray(ssid, 50) ;
+
+  String pass_str = read_String(100); // read ssid from EEPROM from address 100
+  char password[50];
+  pass_str.toCharArray(password, 50);
+  //-----------------------------------------------------------------------------------
+
   pixels.begin();
-  pixels.setBrightness(30);
+  pixels.setBrightness(100);
   pixels.clear();
-  
+
   tft.init();
   tft.setRotation(1);
-  tft.setTextColor(0x0000); 
+  tft.setTextColor(0x0000);
 
   tft.drawLine(0, 106, 480, 106, 0x0000);   tft.drawLine(0, 107, 480, 107, 0x0000);
   tft.drawLine(0, 212, 480, 212, 0x0000);   tft.drawLine(0, 213, 480, 213, 0x0000);
@@ -59,10 +78,9 @@ void setup()
   tft.setTextFont(4); tft.setCursor(220, 220); tft.println("4xx");
   tft.setTextFont(4); tft.setCursor(380, 220); tft.println("5xx");
 
-  Serial.begin(115200);
-  delay(10);
-    
+
   WiFi.begin(ssid, password);
+
 
   while (WiFi.status() != WL_CONNECTED) {
      delay(500);
@@ -71,64 +89,101 @@ void setup()
 }
 
 void loop()
-{ 
+{
     HTTPClient http;
-    
+
     http.begin("https://www.example.com/status");
-    int httpCode = http.GET(); 
+    int httpCode = http.GET();
 
     if (httpCode > 0) {
-      
         String response = http.getString();
         Serial.println(httpCode);
         Serial.println(response);
 
         const size_t capacity = JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(7) + 400;
         DynamicJsonDocument json(capacity);
-      
+
         DeserializationError error = deserializeJson(json, response);
-        
+
         if (!error) {
           String avg_db = json["metrics"]["avg_db"];
           String avg_du = json["metrics"]["avg_duration"];
           String max_db = json["metrics"]["max_db"];
           String max_du = json["metrics"]["max_duration"];
-          
+
           String two_xx  = json["metrics"]["statuses"]["grouped"]["2xx"];
           String four_xx = json["metrics"]["statuses"]["grouped"]["4xx"];
           String five_xx = json["metrics"]["statuses"]["grouped"]["5xx"];
 
-          pixels.clear();
+          tft.setTextFont(6); tft.setCursor(50, 50);   tft.fillRect(44, 44, 150, 50, 0xffff);   tft.println(avg_db.toInt());
+          tft.setTextFont(6); tft.setCursor(290, 50);  tft.fillRect(284, 44, 150, 50, 0xffff);  tft.println(avg_du.toInt());
+          tft.setTextFont(6); tft.setCursor(50, 160);  tft.fillRect(44, 154, 150, 50, 0xffff);  tft.println(max_db.toInt());
+          tft.setTextFont(6); tft.setCursor(290, 160); tft.fillRect(284, 154, 150, 50, 0xffff); tft.println(max_du.toInt());
 
-          if (two_xx.toInt() > 1000 ) { addNextPixel(0, 0, 150, 0); } // 1
-          if (two_xx.toInt() > 2000 ) { addNextPixel(1, 0, 150, 0); } // 2
-          if (two_xx.toInt() > 3000 ) { addNextPixel(2, 0, 150, 0); } // 3
-          if (two_xx.toInt() > 4000 ) { addNextPixel(3, 0, 150, 0); } // 4
-          if (two_xx.toInt() > 5000 ) { addNextPixel(4, 0, 150, 0); } // 5
-          if (two_xx.toInt() > 6000 ) { addNextPixel(5, 0, 150, 0); } // 6
+          tft.setTextFont(6); tft.setCursor(10, 260);  tft.fillRect(4, 254, 152, 50, 0xffff);   tft.println(two_xx.toInt());
+          tft.setTextFont(6); tft.setCursor(170, 260); tft.fillRect(165, 254, 151, 50, 0xffff); tft.println(four_xx.toInt());
+          tft.setTextFont(6); tft.setCursor(330, 260); tft.fillRect(325, 254, 151, 50, 0xffff); tft.println(five_xx.toInt());
 
-          if (max_db.toInt() > 500) { pixels.setPixelColor(6, pixels.Color(250, 0, 255)); }  // 7 - MAX DB warning
-          if (five_xx.toInt() > 0)  { pixels.setPixelColor(7, pixels.Color(150, 0, 0));   }  // 8 - 5xx warning
+          if (five_xx.toInt() > 0 || max_db.toInt() >= 10000)  {
+            for(int i=0; i<6; i++) {
+              pixels.clear();
 
-          pixels.show();
+              if ((i % 2) == 0) {
+                if (five_xx.toInt() > 0)     { FIVE_XX_LEDS(150, 0, 0); }
+                if (max_db.toInt() >= 10000) { DB_LEDS(0, 0, 0);   }
+              } else {
+                if (five_xx.toInt() > 0)     { FIVE_XX_LEDS(0, 0, 0); }
+                if (max_db.toInt() >= 10000) { DB_LEDS(0, 130, 255); }
+              }
 
-          tft.setTextFont(6); tft.setCursor(50, 50);   tft.fillRect(44, 44, 150, 50, 0xffff);   tft.println(avg_db);
-          tft.setTextFont(6); tft.setCursor(290, 50);  tft.fillRect(284, 44, 150, 50, 0xffff);  tft.println(avg_du);
-          tft.setTextFont(6); tft.setCursor(50, 160);  tft.fillRect(44, 154, 150, 50, 0xffff);  tft.println(max_db);
-          tft.setTextFont(6); tft.setCursor(290, 160); tft.fillRect(284, 154, 150, 50, 0xffff); tft.println(max_du);
-          
-          tft.setTextFont(6); tft.setCursor(10, 260);  tft.fillRect(4, 254, 152, 50, 0xffff);   tft.println(two_xx);
-          tft.setTextFont(6); tft.setCursor(170, 260); tft.fillRect(165, 254, 151, 50, 0xffff); tft.println(four_xx);
-          tft.setTextFont(6); tft.setCursor(330, 260); tft.fillRect(325, 254, 151, 50, 0xffff); tft.println(five_xx);    
-        }  
-    } 
+              pixels.show();
+              delay(200);
+            }
+
+            pixels.clear();
+            pixels.show();
+          }
+        }
+    }
 
    http.end();
-   
    delay(1000);
 }
 
-void addNextPixel(int pos, int r, int g, int b){
-  for(int i=0; i<=pos; i++)  { pixels.setPixelColor(i, pixels.Color(r, g, b)); pixels.show(); }           
-  for(int i=pos+1; i<8; i++) { pixels.setPixelColor(i, pixels.Color(0,0,0)); pixels.show();   }            
+void DB_LEDS(int r, int g, int b) {
+  for(int i=0; i<4; i++) { pixels.setPixelColor(i, pixels.Color(r ,g, b));  }
+}
+
+void FIVE_XX_LEDS(int r, int g, int b) {
+  for(int i=4; i<8; i++) { pixels.setPixelColor(i, pixels.Color(r ,g, b)); }
+}
+
+void writeString(char add,String data)
+{
+  int _size = data.length();
+  int i;
+  for(i=0;i<_size;i++)
+  {
+    EEPROM.write(add+i,data[i]);
+  }
+  EEPROM.write(add+_size,'\0');   //Add termination null character for String Data
+  EEPROM.commit();
+}
+
+
+String read_String(char add)
+{
+  int i;
+  char data[100]; //Max 100 Bytes
+  int len=0;
+  unsigned char k;
+  k=EEPROM.read(add);
+  while(k != '\0' && len<500)   //Read until null character
+  {
+    k=EEPROM.read(add+len);
+    data[len]=k;
+    len++;
+  }
+  data[len]='\0';
+  return String(data);
 }
